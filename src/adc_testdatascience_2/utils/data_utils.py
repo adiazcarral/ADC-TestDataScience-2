@@ -6,32 +6,54 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 
 
-def create_sequences(data, input_window=500, output_window=100):
+def create_sequences(dataframe, input_window=500, output_window=100, step=6):
+    appliances_idx = dataframe.columns.get_loc("Appliances")
+    
+    # Drop Appliances column for X, keep it for y
+    X_data = dataframe.drop(columns=["Appliances"]).values
+    y_data = dataframe["Appliances"].values
+
     X, y = [], []
-    for i in range(len(data) - input_window - output_window):
-        X.append(data[i:i + input_window])
-        y.append(data[i + input_window:i + input_window + output_window, 0])  # target: Appliances
-    return np.array(X), np.array(y)
+    for i in range(0, len(dataframe) - input_window - output_window, step):  # Increment by 'step' (6)
+        X.append(X_data[i:i + input_window])  # [window, num_features-1]
+        y.append(y_data[i + input_window:i + input_window + output_window])  # [output_window]
+
+    X = np.array(X)
+    y = np.array(y)
+
+    print(f"✅ X shape: {X.shape} (samples, input_window, input_features)")
+    print(f"✅ y shape: {y.shape} (samples, output_window)")
+
+    return X, y
 
 
-def get_dataloaders(csv_path, input_window=500, output_window=100, batch_size=64, test_size=0.2, val_size=0.1):
-    print(f"📂 Loading data from: {csv_path}")
-    df = pd.read_csv(csv_path)
-    data = df.values.astype(np.float32)
+def get_dataloaders(csv_path, input_window=500, output_window=100):
+    df = pd.read_csv(csv_path, index_col=0, parse_dates=True)
 
-    print("📐 Creating sequences for forecasting...")
-    X, y = create_sequences(data, input_window=input_window, output_window=output_window)
+    # OPTIONAL: You can print this to confirm column names
+    # print(df.columns)
 
-    print("🔀 Splitting into train/val/test...")
-    X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=test_size + val_size, shuffle=False)
-    relative_val_size = val_size / (test_size + val_size)
-    X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=relative_val_size, shuffle=False)
+    # Ensure all values are float32 except the index
+    df = df.astype(np.float32)
 
-    print("📦 Creating TensorDatasets and DataLoaders...")
-    train_loader = DataLoader(TensorDataset(torch.tensor(X_train), torch.tensor(y_train)), batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(TensorDataset(torch.tensor(X_val), torch.tensor(y_val)), batch_size=batch_size)
-    test_loader = DataLoader(TensorDataset(torch.tensor(X_test), torch.tensor(y_test)), batch_size=batch_size)
+    # Create sequences using the DataFrame (so we can access column names)
+    X, y = create_sequences(df, input_window=input_window, output_window=output_window)
 
-    print("✅ DataLoaders ready!")
+    # Convert to PyTorch tensors
+    X = torch.tensor(X, dtype=torch.float32)
+    y = torch.tensor(y, dtype=torch.float32)
+
+    # Split (e.g., 70% train, 15% val, 15% test)
+    total_samples = len(X)
+    train_end = int(0.7 * total_samples)
+    val_end = int(0.85 * total_samples)
+
+    train_dataset = torch.utils.data.TensorDataset(X[:train_end], y[:train_end])
+    val_dataset = torch.utils.data.TensorDataset(X[train_end:val_end], y[train_end:val_end])
+    test_dataset = torch.utils.data.TensorDataset(X[val_end:], y[val_end:])
+
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=False)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=32, shuffle=False)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=False)
+
     return train_loader, val_loader, test_loader
-
