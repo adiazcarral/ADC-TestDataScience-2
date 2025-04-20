@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 
 
-def create_sequences(dataframe, input_window=500, output_window=100, step=6):
+def create_sequences(dataframe, input_window=500, output_window=100, step=10):
     appliances_idx = dataframe.columns.get_loc("Appliances")
     
     # Drop Appliances column for X, keep it for y
@@ -52,8 +52,8 @@ def get_dataloaders(csv_path, input_window=500, output_window=100):
     val_dataset = torch.utils.data.TensorDataset(X[train_end:val_end], y[train_end:val_end])
     test_dataset = torch.utils.data.TensorDataset(X[val_end:], y[val_end:])
 
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=False)
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=32, shuffle=False)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=False)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=16, shuffle=False)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=16, shuffle=False)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=16, shuffle=False)
 
     return train_loader, val_loader, test_loader

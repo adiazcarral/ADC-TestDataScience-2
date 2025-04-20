@@ -60,8 +60,8 @@ def evaluate(model, loader, device):
 if __name__ == "__main__":
     train_loader, val_loader, _ = get_dataloaders(
         csv_path="src/adc_testdatascience_2/data/processed_energy.csv",
-        input_window=500, output_window=100
+        input_window=1000, output_window=100
     )
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = SimpleRNN(input_dim=25, hidden_dim=32, output_dim=100)
-    train_direct_rnn(model, train_loader, val_loader, device, epochs=5)
+    model = SimpleRNN(input_dim=25, hidden_dim=64, output_dim=100)
+    train_direct_rnn(model, train_loader, val_loader, device, epochs=10)
