@@ -5,6 +5,7 @@ from src.adc_testdatascience_2.models.rnn import SimpleRNN
 from src.adc_testdatascience_2.utils.data_utils import get_dataloaders
 import pickle
 import os
+import pandas as pd 
 
 # Paths
 model_path = "src/adc_testdatascience_2/models/rnn_direct.pth"
@@ -15,9 +16,9 @@ csv_path = "src/adc_testdatascience_2/data/processed_energy.csv"
 # Constants
 input_window = 1000
 forecast_horizon = 100
-input_dim = 25
+input_dim = 26
 hidden_dim = 64
-num_layers = 2
+num_layers = 1
 
 # Load data
 _, _, test_loader = get_dataloaders(
@@ -28,7 +29,7 @@ _, _, test_loader = get_dataloaders(
 
 # Take the first batch and first sample
 X_test, y_test = next(iter(test_loader))
-X_test = X_test[0].unsqueeze(0)  # shape: (1, 500, 25)
+X_test = X_test[0].unsqueeze(0)  # shape: (1, 500, 26)
 y_test = y_test[0].numpy()       # shape: (100,)
 
 # Load model
@@ -65,7 +66,7 @@ with torch.no_grad():
 plt.figure(figsize=(12, 5))
 plt.plot(y_test, label="True", linewidth=2)
 plt.plot(prediction, label="Forecast", linestyle='--')
-plt.title("Direct RNN Forecast (100 steps) - Inverse Transformed")
+plt.title("Direct RNN Forecast (100 steps)")
 plt.xlabel("Future time steps")
 plt.ylabel("Appliances")
 plt.legend()
@@ -77,4 +78,55 @@ os.makedirs(os.path.dirname(plot_path), exist_ok=True)
 plt.savefig(plot_path)
 plt.show()
 
-print("✅ Direct forecast complete with inverse transformation.")
+print("✅ Direct forecast complete.")
+
+###################
+
+# Load raw normalized data
+df = pd.read_csv(csv_path)
+appliances_norm = df["Appliances"].values  # already normalized
+
+# Prepare the input for prediction (last 2000 values before forecast)
+input_seq = appliances_norm[:input_window]
+X_input = np.zeros((1, input_window, 26))
+X_input[0, :, -1] = input_seq  # Appliances is the last column
+
+# Convert to tensor
+X_input_tensor = torch.tensor(X_input, dtype=torch.float32).to(device)
+
+# Predict
+with torch.no_grad():
+    prediction = model(X_input_tensor).cpu().numpy().flatten()
+
+# Get the true future values for comparison
+y_true_future = appliances_norm[input_window:input_window + forecast_horizon]
+
+# Plotting
+x_history = np.arange(input_window)
+x_forecast = np.arange(input_window, input_window + forecast_horizon)
+
+plt.figure(figsize=(12, 5))
+plt.plot(x_history, input_seq, label="History (Appliances)", linewidth=2, color="tab:blue")
+plt.plot(x_forecast, y_true_future, label="True Future", linewidth=2, color="green")
+plt.plot(x_forecast, prediction, label="Forecast", linestyle='--', color="orange")
+plt.axvline(x=input_window, color='gray', linestyle=':', label="Forecast Start")
+
+plt.title("Direct RNN Forecast with History (Normalized)")
+plt.xlabel("Time steps")
+plt.ylabel("Appliances (normalized)")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+
+# Save
+plot_path_clean = "src/adc_testdatascience_2/scripts/plots/rnn_direct_clean_forecast.png"
+os.makedirs(os.path.dirname(plot_path_clean), exist_ok=True)
+plt.savefig(plot_path_clean)
+plt.show()
+
+print("✅ Clean forecast plot based on true time index complete.")
+
+
+
+
+

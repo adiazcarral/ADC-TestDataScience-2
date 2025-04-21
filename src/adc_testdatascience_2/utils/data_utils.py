@@ -6,11 +6,12 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 
 
-def create_sequences(dataframe, input_window=500, output_window=100, step=10):
+def create_sequences(dataframe, input_window=500, output_window=100, step=12):
     appliances_idx = dataframe.columns.get_loc("Appliances")
     
     # Drop Appliances column for X, keep it for y
-    X_data = dataframe.drop(columns=["Appliances"]).values
+    # X_data = dataframe.drop(columns=["Appliances"]).values
+    X_data = dataframe
     y_data = dataframe["Appliances"].values
 
     X, y = [], []
@@ -27,14 +28,27 @@ def create_sequences(dataframe, input_window=500, output_window=100, step=10):
     return X, y
 
 
+def safe_rolling_sum(df, column="Appliances", window=7*24*6):  # 1008
+    values = df[column].values.astype(np.float64)
+    cum = np.cumsum(np.insert(values, 0, 0))  # Pad with zero for correct diff
+    result = cum[window:] - cum[:-window]
+    padded_result = np.concatenate([np.full(window-1, result[0]), result])
+    df['Appliances_cumulative'] = padded_result
+    return df
+
+
 def get_dataloaders(csv_path, input_window=500, output_window=100):
     df = pd.read_csv(csv_path, index_col=0, parse_dates=True)
 
     # OPTIONAL: You can print this to confirm column names
     # print(df.columns)
-
+    batch_size = 64
     # Ensure all values are float32 except the index
     df = df.astype(np.float32)
+
+    df['Appliances'] = df['Appliances'].rolling(6*6, min_periods=1).mean()
+    df['Appliances'] = np.log1p(df['Appliances'])
+
 
     # Create sequences using the DataFrame (so we can access column names)
     X, y = create_sequences(df, input_window=input_window, output_window=output_window)
@@ -52,8 +66,8 @@ def get_dataloaders(csv_path, input_window=500, output_window=100):
     val_dataset = torch.utils.data.TensorDataset(X[train_end:val_end], y[train_end:val_end])
     test_dataset = torch.utils.data.TensorDataset(X[val_end:], y[val_end:])
 
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=16, shuffle=False)
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=16, shuffle=False)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=16, shuffle=False)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     return train_loader, val_loader, test_loader

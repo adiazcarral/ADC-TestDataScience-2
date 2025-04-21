@@ -63,5 +63,5 @@ if __name__ == "__main__":
         input_window=1000, output_window=100
     )
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = SimpleRNN(input_dim=25, hidden_dim=64, output_dim=100)
+    model = SimpleRNN(input_dim=26, hidden_dim=64, output_dim=100)
     train_direct_rnn(model, train_loader, val_loader, device, epochs=10)
