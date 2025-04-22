@@ -12,13 +12,13 @@ forecast_horizon = 100
 input_dim = 26
 output_dim = 1
 hidden_dim = 64
-num_layers = 1
-num_epochs = 20
+num_layers = 2
+num_epochs = 10
 lr = 1e-3
 batch_size = 32
 
 def train():
-    _, train_loader, val_loader = get_dataloaders(csv_path, input_window, forecast_horizon, batch_size=batch_size)
+    _, train_loader, val_loader = get_dataloaders(csv_path, input_window, forecast_horizon)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = LSTMEncoderDecoder(input_dim, hidden_dim, output_dim, forecast_horizon, num_layers).to(device)

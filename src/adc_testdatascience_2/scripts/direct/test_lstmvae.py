@@ -74,6 +74,7 @@ def test_lstm_vae_with_uncertainty(model, test_loader, device, df_raw, input_win
             ax.legend()
             ax.grid(True)
             plt.tight_layout()
+            plt.savefig("src/adc_testdatascience_2/scripts/plots/lstmvae_direct_forecast.png")
             plt.show()
 
 

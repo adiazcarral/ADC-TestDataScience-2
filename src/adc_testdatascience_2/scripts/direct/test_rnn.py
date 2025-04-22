@@ -24,6 +24,8 @@ def run_rnn_forecast():
     hidden_dim = 128
     num_layers = 2
 
+
+
     # Load data
     _, _, test_loader = get_dataloaders(
         csv_path=csv_path,
@@ -39,7 +41,7 @@ def run_rnn_forecast():
     # Load model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = SimpleRNN(input_dim=input_dim, hidden_dim=hidden_dim,
-                      output_dim=forecast_horizon, num_layers=num_layers).to(device)
+                    output_dim=forecast_horizon, num_layers=num_layers).to(device)
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()
 
@@ -52,12 +54,30 @@ def run_rnn_forecast():
         X_test = X_test.to(device)
         prediction = model(X_test).cpu().numpy().flatten()
 
-    # Plot forecast result
+    # Inverse transform (Appliances is the FIRST column now)
+    input_seq = X_test[0, :, 0].cpu().numpy()  # <- index 0
+    history_with_zeros = np.zeros((input_seq.shape[0], 26))
+    history_with_zeros[:, 0] = input_seq
+    y_test_with_zeros = np.zeros((y_test.shape[0], 26))
+    y_test_with_zeros[:, 0] = y_test
+    prediction_with_zeros = np.zeros((prediction.shape[0], 26))
+    prediction_with_zeros[:, 0] = prediction
+
+    # input_seq = scaler.inverse_transform(history_with_zeros)[:, 0]
+    # y_test = scaler.inverse_transform(y_test_with_zeros)[:, 0]
+    # prediction = scaler.inverse_transform(prediction_with_zeros)[:, 0]
+
+    # Plot: last validation window + forecast
+    x_history = np.arange(input_window)
+    x_forecast = np.arange(input_window, input_window + forecast_horizon)
+
     plt.figure(figsize=(12, 5))
-    plt.plot(y_test, label="True", linewidth=2)
-    plt.plot(prediction, label="Forecast", linestyle='--')
-    plt.title("Direct RNN Forecast (100 steps)")
-    plt.xlabel("Future time steps")
+    plt.plot(x_history, input_seq, label="History (Validation)", linewidth=2, color="tab:blue")
+    plt.plot(x_forecast, y_test, label="True Future", linewidth=2, color="green")
+    plt.plot(x_forecast, prediction, label="Forecast", linestyle='--', color="orange")
+    plt.axvline(x=input_window, color='gray', linestyle=':', label="Forecast Start")
+    plt.title("RNN Forecast with Last Validation Window (Appliances)")
+    plt.xlabel("Time steps")
     plt.ylabel("Appliances")
     plt.legend()
     plt.grid(True)
@@ -65,6 +85,8 @@ def run_rnn_forecast():
     os.makedirs(os.path.dirname(plot_path), exist_ok=True)
     plt.savefig(plot_path)
     plt.show()
+
+
 
     print("✅ Direct forecast complete.")
 

@@ -18,6 +18,7 @@ def create_sequences(dataframe, input_window=500, output_window=100, step=12):
     for i in range(0, len(dataframe) - input_window - output_window, step):  # Increment by 'step' (6)
         X.append(X_data[i:i + input_window])  # [window, num_features-1]
         y.append(y_data[i + input_window:i + input_window + output_window])  # [output_window]
+        # y.append(y_data[i + input_window + output_window:i + input_window + 2*output_window])  # [output_window]
 
     X = np.array(X)
     y = np.array(y)
@@ -65,7 +66,7 @@ def get_dataloaders(csv_path, input_window=500, output_window=100):
     val_dataset = torch.utils.data.TensorDataset(X[train_end:val_end], y[train_end:val_end])
     test_dataset = torch.utils.data.TensorDataset(X[val_end:], y[val_end:])
 
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 

@@ -17,7 +17,7 @@ forecast_horizon = 100
 input_dim = 26
 output_dim = 1
 hidden_dim = 64
-num_layers = 1
+num_layers = 2
 
 def test():
     _, _, test_loader = get_dataloaders(csv_path, input_window, forecast_horizon)
@@ -38,18 +38,18 @@ def test():
         X_test = X_test.to(device)
         prediction = model(X_test).cpu().numpy().flatten()
 
-    # Inverse transform
-    y_test_zeros = np.zeros((y_test.shape[0], 26))
-    pred_zeros = np.zeros((prediction.shape[0], 26))
-    y_test_zeros[:, -1] = y_test
-    pred_zeros[:, -1] = prediction
-    y_test_inv = scaler.inverse_transform(y_test_zeros)[:, -1]
-    pred_inv = scaler.inverse_transform(pred_zeros)[:, -1]
+    # # Inverse transform
+    # y_test_zeros = np.zeros((y_test.shape[0], 26))
+    # pred_zeros = np.zeros((prediction.shape[0], 26))
+    # y_test_zeros[:, -1] = y_test
+    # pred_zeros[:, -1] = prediction
+    # y_test_inv = scaler.inverse_transform(y_test_zeros)[:, -1]
+    # pred_inv = scaler.inverse_transform(pred_zeros)[:, -1]
 
     # Plot
     plt.figure(figsize=(12, 5))
-    plt.plot(y_test_inv, label="True")
-    plt.plot(pred_inv, label="Forecast", linestyle='--')
+    plt.plot(y_test, label="True")
+    plt.plot(prediction, label="Forecast", linestyle='--')
     plt.title("LSTM Encoder-Decoder Forecast (100 steps)")
     plt.xlabel("Future time steps")
     plt.ylabel("Appliances")
