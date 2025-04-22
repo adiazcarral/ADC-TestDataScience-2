@@ -10,7 +10,7 @@ from src.adc_testdatascience_2.utils.data_utils import get_dataloaders
 def train_direct_rnn(model, train_loader, val_loader, device, epochs=10):
     model.to(device)
     criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=1e-03, weight_decay=1e-04)
 
     for epoch in range(epochs):
         model.train()
@@ -63,5 +63,5 @@ if __name__ == "__main__":
         input_window=1000, output_window=100
     )
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = SimpleRNN(input_dim=26, hidden_dim=64, output_dim=100)
+    model = SimpleRNN(input_dim=26, hidden_dim=128, num_layers=2, output_dim=100)
     train_direct_rnn(model, train_loader, val_loader, device, epochs=10)

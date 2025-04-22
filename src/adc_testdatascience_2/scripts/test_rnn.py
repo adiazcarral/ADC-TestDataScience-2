@@ -1,129 +1,112 @@
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
-from src.adc_testdatascience_2.models.rnn import SimpleRNN
-from src.adc_testdatascience_2.utils.data_utils import get_dataloaders
 import pickle
 import os
-import pandas as pd 
+import pandas as pd
 
-# Paths
-model_path = "src/adc_testdatascience_2/models/rnn_direct.pth"
-scaler_path = "src/adc_testdatascience_2/data/processed_energy_scaler.pkl"
-plot_path = "src/adc_testdatascience_2/scripts/plots/rnn_direct_forecast.png"
-csv_path = "src/adc_testdatascience_2/data/processed_energy.csv"
+from src.adc_testdatascience_2.models.rnn import SimpleRNN
+from src.adc_testdatascience_2.utils.data_utils import get_dataloaders
 
-# Constants
-input_window = 1000
-forecast_horizon = 100
-input_dim = 26
-hidden_dim = 64
-num_layers = 1
 
-# Load data
-_, _, test_loader = get_dataloaders(
-    csv_path=csv_path,
-    input_window=input_window,
-    output_window=forecast_horizon
-)
+def run_rnn_forecast():
+    # Paths
+    model_path = "src/adc_testdatascience_2/models/rnn_direct.pth"
+    scaler_path = "src/adc_testdatascience_2/data/processed_energy_scaler.pkl"
+    plot_path = "src/adc_testdatascience_2/scripts/plots/rnn_direct_forecast.png"
+    plot_path_clean = "src/adc_testdatascience_2/scripts/plots/rnn_direct_clean_forecast.png"
+    csv_path = "src/adc_testdatascience_2/data/processed_energy.csv"
 
-# Take the first batch and first sample
-X_test, y_test = next(iter(test_loader))
-X_test = X_test[0].unsqueeze(0)  # shape: (1, 500, 26)
-y_test = y_test[0].numpy()       # shape: (100,)
+    # Constants
+    input_window = 1000
+    forecast_horizon = 100
+    input_dim = 26
+    hidden_dim = 128
+    num_layers = 2
 
-# Load model
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = SimpleRNN(input_dim=input_dim, hidden_dim=hidden_dim,
-                  output_dim=forecast_horizon, num_layers=num_layers).to(device)
-model.load_state_dict(torch.load(model_path, map_location=device))
-model.eval()
+    # Load data
+    _, _, test_loader = get_dataloaders(
+        csv_path=csv_path,
+        input_window=input_window,
+        output_window=forecast_horizon
+    )
 
-# Load the scaler for inverse transformation
-with open(scaler_path, 'rb') as f:
-    scaler = pickle.load(f)
+    # Take the first batch and sample
+    X_test, y_test = next(iter(test_loader))
+    X_test = X_test[0].unsqueeze(0)  # shape: (1, 1000, 26)
+    y_test = y_test[0].numpy()       # shape: (100,)
 
-# Forecast directly
-with torch.no_grad():
-    X_test = X_test.to(device)
-    prediction = model(X_test).cpu().numpy().flatten()
+    # Load model
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = SimpleRNN(input_dim=input_dim, hidden_dim=hidden_dim,
+                      output_dim=forecast_horizon, num_layers=num_layers).to(device)
+    model.load_state_dict(torch.load(model_path, map_location=device))
+    model.eval()
 
-# # Inverse transformation of the 'Appliances' values only
-# # Create an array of shape (100, 26) for inverse transformation
-# # Set all input features to 0 and apply to only the 'Appliances' column
-# y_test_with_zeros = np.zeros((y_test.shape[0], 26))
-# prediction_with_zeros = np.zeros((prediction.shape[0], 26))
+    # Load the scaler
+    with open(scaler_path, 'rb') as f:
+        scaler = pickle.load(f)
 
-# # Set the last column to the true and predicted 'Appliances' values
-# y_test_with_zeros[:, -1] = y_test
-# prediction_with_zeros[:, -1] = prediction
+    # Forecast
+    with torch.no_grad():
+        X_test = X_test.to(device)
+        prediction = model(X_test).cpu().numpy().flatten()
 
-# # Inverse transform both arrays
-# y_test = scaler.inverse_transform(y_test_with_zeros)[:, -1]
-# prediction = scaler.inverse_transform(prediction_with_zeros)[:, -1]
+    # Plot forecast result
+    plt.figure(figsize=(12, 5))
+    plt.plot(y_test, label="True", linewidth=2)
+    plt.plot(prediction, label="Forecast", linestyle='--')
+    plt.title("Direct RNN Forecast (100 steps)")
+    plt.xlabel("Future time steps")
+    plt.ylabel("Appliances")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    os.makedirs(os.path.dirname(plot_path), exist_ok=True)
+    plt.savefig(plot_path)
+    plt.show()
 
-# Plot results
-plt.figure(figsize=(12, 5))
-plt.plot(y_test, label="True", linewidth=2)
-plt.plot(prediction, label="Forecast", linestyle='--')
-plt.title("Direct RNN Forecast (100 steps)")
-plt.xlabel("Future time steps")
-plt.ylabel("Appliances")
-plt.legend()
-plt.grid(True)
-plt.tight_layout()
+    print("✅ Direct forecast complete.")
 
-# Save plot
-os.makedirs(os.path.dirname(plot_path), exist_ok=True)
-plt.savefig(plot_path)
-plt.show()
+    # Load raw normalized data
+    df = pd.read_csv(csv_path)
+    df['Appliances'] = df['Appliances'].rolling(6 * 6, min_periods=1).mean()
+    df['Appliances'] = np.log1p(df['Appliances'])
+    appliances_norm = df['Appliances'].values
 
-print("✅ Direct forecast complete.")
+    # Build input for clean forecast
+    input_seq = appliances_norm[:input_window]
+    X_input = np.zeros((1, input_window, 26))
+    X_input[0, :, -1] = input_seq  # Use only the 'Appliances' feature
 
-###################
+    # Forecast again
+    X_input_tensor = torch.tensor(X_input, dtype=torch.float32).to(device)
+    with torch.no_grad():
+        prediction = model(X_input_tensor).cpu().numpy().flatten()
 
-# Load raw normalized data
-df = pd.read_csv(csv_path)
-df['Appliances'] = df['Appliances'].rolling(6*6, min_periods=1).mean()
-df['Appliances'] = np.log1p(df['Appliances'])
-appliances_norm = df['Appliances'].values # already normalized
+    # Ground truth for comparison
+    y_true_future = appliances_norm[input_window:input_window + forecast_horizon]
+    x_history = np.arange(input_window)
+    x_forecast = np.arange(input_window, input_window + forecast_horizon)
 
-# Prepare the input for prediction (last 2000 values before forecast)
-input_seq = appliances_norm[:input_window]
-X_input = np.zeros((1, input_window, 26))
-X_input[0, :, -1] = input_seq  # Appliances is the last column
+    # Plot clean forecast
+    plt.figure(figsize=(12, 5))
+    plt.plot(x_history, input_seq, label="History (Appliances)", linewidth=2, color="tab:blue")
+    plt.plot(x_forecast, y_true_future, label="True Future", linewidth=2, color="green")
+    plt.plot(x_forecast, prediction, label="Forecast", linestyle='--', color="orange")
+    plt.axvline(x=input_window, color='gray', linestyle=':', label="Forecast Start")
+    plt.title("Direct RNN Forecast with History (Normalized)")
+    plt.xlabel("Time steps")
+    plt.ylabel("Appliances (normalized)")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    os.makedirs(os.path.dirname(plot_path_clean), exist_ok=True)
+    plt.savefig(plot_path_clean)
+    plt.show()
 
-# Convert to tensor
-X_input_tensor = torch.tensor(X_input, dtype=torch.float32).to(device)
+    print("✅ Clean forecast plot based on true time index complete.")
 
-# Predict
-with torch.no_grad():
-    prediction = model(X_input_tensor).cpu().numpy().flatten()
 
-# Get the true future values for comparison
-y_true_future = appliances_norm[input_window:input_window + forecast_horizon]
-
-# Plotting
-x_history = np.arange(input_window)
-x_forecast = np.arange(input_window, input_window + forecast_horizon)
-
-plt.figure(figsize=(12, 5))
-plt.plot(x_history, input_seq, label="History (Appliances)", linewidth=2, color="tab:blue")
-plt.plot(x_forecast, y_true_future, label="True Future", linewidth=2, color="green")
-plt.plot(x_forecast, prediction, label="Forecast", linestyle='--', color="orange")
-plt.axvline(x=input_window, color='gray', linestyle=':', label="Forecast Start")
-
-plt.title("Direct RNN Forecast with History (Normalized)")
-plt.xlabel("Time steps")
-plt.ylabel("Appliances (normalized)")
-plt.legend()
-plt.grid(True)
-plt.tight_layout()
-
-# Save
-plot_path_clean = "src/adc_testdatascience_2/scripts/plots/rnn_direct_clean_forecast.png"
-os.makedirs(os.path.dirname(plot_path_clean), exist_ok=True)
-plt.savefig(plot_path_clean)
-plt.show()
-
-print("✅ Clean forecast plot based on true time index complete.")
+if __name__ == "__main__":
+    run_rnn_forecast()
