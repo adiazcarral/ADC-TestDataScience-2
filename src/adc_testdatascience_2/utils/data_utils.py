@@ -42,13 +42,12 @@ def get_dataloaders(csv_path, input_window=500, output_window=100):
 
     # OPTIONAL: You can print this to confirm column names
     # print(df.columns)
-    batch_size = 64
+    batch_size = 16
     # Ensure all values are float32 except the index
     df = df.astype(np.float32)
 
     df['Appliances'] = df['Appliances'].rolling(6*6, min_periods=1).mean()
     df['Appliances'] = np.log1p(df['Appliances'])
-
 
     # Create sequences using the DataFrame (so we can access column names)
     X, y = create_sequences(df, input_window=input_window, output_window=output_window)

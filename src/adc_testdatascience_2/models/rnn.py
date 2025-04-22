@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
-
+import numpy as np
 
 class SimpleRNN(nn.Module):
-    def __init__(self, input_dim=25, hidden_dim=64, output_dim=100, num_layers=1, dropout=0.0):
+    def __init__(self, input_dim=25, hidden_dim=64, output_dim=100, num_layers=2, dropout=0.3):
         super(SimpleRNN, self).__init__()
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
@@ -18,6 +18,5 @@ class SimpleRNN(nn.Module):
 
     def loss(self, y_true, y_pred):
         return nn.MSELoss()(y_pred, y_true)
-
 
 

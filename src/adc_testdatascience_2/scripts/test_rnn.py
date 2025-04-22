@@ -84,7 +84,9 @@ print("✅ Direct forecast complete.")
 
 # Load raw normalized data
 df = pd.read_csv(csv_path)
-appliances_norm = df["Appliances"].values  # already normalized
+df['Appliances'] = df['Appliances'].rolling(6*6, min_periods=1).mean()
+df['Appliances'] = np.log1p(df['Appliances'])
+appliances_norm = df['Appliances'].values # already normalized
 
 # Prepare the input for prediction (last 2000 values before forecast)
 input_seq = appliances_norm[:input_window]
@@ -125,8 +127,3 @@ plt.savefig(plot_path_clean)
 plt.show()
 
 print("✅ Clean forecast plot based on true time index complete.")
-
-
-
-
-

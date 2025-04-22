@@ -14,8 +14,8 @@ class ApplianceEnergyProcessor:
         self.save_path = save_path
         self.df = None
         self.cleaned_df = None
-        self.sequence_length = 1000
-        self.forecast_horizon = 100
+        self.sequence_length = 500
+        self.forecast_horizon = 10
 
     def load_dataset(self):
         print(f"📂 Loading dataset from: {self.dataset_path}")

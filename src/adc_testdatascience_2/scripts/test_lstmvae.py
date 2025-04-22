@@ -19,27 +19,17 @@ def test_lstm_vae_with_uncertainty(model, test_loader, device, df_raw, input_win
             x_batch = x_batch.to(device)
             batch_size, pred_len = y_batch.shape[0], y_batch.shape[1]
 
-            # Sample latent vectors
-            samples = []
-            for _ in range(n_samples):
-                x_hat, _, _ = model(x_batch)
-                samples.append(x_hat.cpu())  # shape: [batch_size, pred_len, 1]
-
-            samples = torch.stack(samples, dim=0)  # shape: [n_samples, batch_size, pred_len, 1]
-            samples = samples.squeeze(-1).permute(1, 2, 0)  # shape: [batch_size, pred_len, n_samples]
+            # Sample outputs from the VAE model
+            samples = model.sample(x_batch, n_samples)  # shape: [batch, n_samples, output_window, output_dim]
+            samples = samples.squeeze(-1)               # shape: [batch, n_samples, output_window]
+            samples = samples.permute(0, 2, 1)          # shape: [batch, output_window, n_samples]
 
             # Compute statistics
-            mean_pred = samples.mean(dim=-1)           # [batch_size, pred_len]
+            mean_pred = samples.mean(dim=-1)            # [batch, output_window]
             lower_5 = torch.quantile(samples, 0.05, dim=-1)
             upper_95 = torch.quantile(samples, 0.95, dim=-1)
 
-            y_true = y_batch.squeeze(-1).cpu()         # [batch_size, pred_len]
-
-            # Denormalize
-            mean_pred = np.expm1(mean_pred.numpy() * target_std + target_mean)
-            lower_5 = np.expm1(lower_5.numpy() * target_std + target_mean)
-            upper_95 = np.expm1(upper_95.numpy() * target_std + target_mean)
-            y_true = np.expm1(y_true.numpy() * target_std + target_mean)
+            y_true = y_batch.squeeze(-1).cpu()          # [batch, output_window]
 
             # Store only the first sample for visualization
             all_y_true.append(y_true[0])
@@ -64,6 +54,8 @@ def test_lstm_vae_with_uncertainty(model, test_loader, device, df_raw, input_win
             # ==== Plot 2: Context + forecast ====
             # Start index of the forecast in the raw data
             start_idx = input_window + i  # assumes test_loader is not shuffled
+            df_raw[target_column] = df_raw[target_column].rolling(6*6, min_periods=1).mean()
+            df_raw[target_column] = np.log1p(df_raw[target_column])
             context = df_raw[target_column].values[start_idx - input_window:start_idx]
             forecast_range = np.arange(input_window, input_window + pred_len)
             full_time = np.arange(input_window + pred_len)
@@ -88,14 +80,14 @@ def test_lstm_vae_with_uncertainty(model, test_loader, device, df_raw, input_win
 if __name__ == "__main__":
     # Load model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = LSTMVAE(num_input=26, num_hidden=64, num_layers=1, dropout=0.0, output_window=100, output_dim=1)
+    model = LSTMVAE(num_input=26, num_hidden=64, num_layers=2, dropout=0.3, output_window=100, output_dim=1)
     model.load_state_dict(torch.load("src/adc_testdatascience_2/models/lstmvae_direct.pth", map_location=device))
     model.to(device)
 
     # Load test data
     _, _, test_loader = get_dataloaders(
         csv_path="src/adc_testdatascience_2/data/processed_energy.csv",
-        input_window=500, output_window=100
+        input_window=1000, output_window=100
     )
 
     # Replace with your actual target stats if applicable
@@ -110,7 +102,7 @@ if __name__ == "__main__":
         test_loader=test_loader,
         device=device,
         df_raw=df_raw,
-        input_window=500,
+        input_window=1000,
         target_mean=0.0,
         target_std=1.0,
         target_column="Appliances",

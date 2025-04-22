@@ -2,13 +2,13 @@ import torch
 import torch.optim as optim
 import numpy as np
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-from src.adc_testdatascience_2.models.lstm_vae import LSTMVAE, RecursiveLSTMVAE, loss
+from src.adc_testdatascience_2.models.lstm_vae import LSTMVAE, loss
 from src.adc_testdatascience_2.utils.data_utils import get_dataloaders
 
 
 def train_direct_lstmvae(model, train_loader, val_loader, device, epochs=10):
     model.to(device)
-    optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-3)
+    optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)
 
     for epoch in range(epochs):
         model.train()
@@ -68,15 +68,15 @@ def evaluate(model, loader, device):
 if __name__ == "__main__":
     train_loader, val_loader, _ = get_dataloaders(
         csv_path="src/adc_testdatascience_2/data/processed_energy.csv",
-        input_window=500, output_window=100
+        input_window=2000, output_window=100
     )
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = LSTMVAE(
         num_input=26,      # 26 input features
         num_hidden=64,
-        num_layers=1,
-        dropout=0.0,
+        num_layers=2,
+        dropout=0.3,
         output_window=100,  # 100 time steps forecasted
         output_dim=1        # predicting 1 variable: Appliances
     )
-    train_direct_lstmvae(model, train_loader, val_loader, device, epochs=5)
+    train_direct_lstmvae(model, train_loader, val_loader, device, epochs=10)
