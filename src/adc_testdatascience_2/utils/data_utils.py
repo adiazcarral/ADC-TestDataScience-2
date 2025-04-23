@@ -6,19 +6,39 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 
 
-def create_sequences(dataframe, input_window=500, output_window=100, step=12):
-    appliances_idx = dataframe.columns.get_loc("Appliances")
+# def create_sequences(dataframe, input_window=500, output_window=100, offset=100, step=12):
+#     appliances_idx = dataframe.columns.get_loc("Appliances")
     
-    # Drop Appliances column for X, keep it for y
-    # X_data = dataframe.drop(columns=["Appliances"]).values
-    X_data = dataframe
-    y_data = dataframe["Appliances"].values
+#     # Drop Appliances column for X, keep it for y
+#     # X_data = dataframe.drop(columns=["Appliances"]).values
+#     X_data = dataframe
+#     y_data = dataframe["Appliances"].values
+    
+#     X, y = [], []
+#     for i in range(0, len(dataframe) - input_window - output_window, step):  # Increment by 'step' (6)
+#         X.append(X_data[i:i + input_window])  # [window, num_features-1]
+#         y.append(y_data[i + input_window:i + input_window + output_window])  # [output_window]
+        
+#         # y.append(y_data[i + input_window + offset:i + input_window + offset + output_window])  # [output_window]
+        
+#     X = np.array(X)
+#     y = np.array(y)
+
+#     print(f"✅ X shape: {X.shape} (samples, input_window, input_features)")
+#     print(f"✅ y shape: {y.shape} (samples, output_window)")
+
+#     return X, y
+
+def create_sequences(dataframe, input_window=500, output_window=1, step=24, offset=100):
+    appliances_idx = dataframe.columns.get_loc("Appliances")
+
+    X_data = dataframe.values  # full multivariate data
+    y_data = dataframe["Appliances"].values  # target column
 
     X, y = [], []
-    for i in range(0, len(dataframe) - input_window - output_window, step):  # Increment by 'step' (6)
-        X.append(X_data[i:i + input_window])  # [window, num_features-1]
-        y.append(y_data[i + input_window:i + input_window + output_window])  # [output_window]
-        # y.append(y_data[i + input_window + output_window:i + input_window + 2*output_window])  # [output_window]
+    for i in range(0, len(dataframe) - input_window - offset - output_window + 1, step):
+        X.append(X_data[i : i + input_window])
+        y.append(y_data[i + input_window + offset : i + input_window + offset + output_window])
 
     X = np.array(X)
     y = np.array(y)
@@ -38,20 +58,20 @@ def safe_rolling_sum(df, column="Appliances", window=7*24*6):  # 1008
     return df
 
 
-def get_dataloaders(csv_path, input_window=500, output_window=100):
+def get_dataloaders(csv_path, input_window=500, output_window=100, offset=100):
     df = pd.read_csv(csv_path, index_col=0, parse_dates=True)
 
     # OPTIONAL: You can print this to confirm column names
     # print(df.columns)
-    batch_size = 16
+    batch_size = 32
     # Ensure all values are float32 except the index
     df = df.astype(np.float32)
 
     df['Appliances'] = df['Appliances'].rolling(6*6, min_periods=1).mean()
-    df['Appliances'] = np.log1p(df['Appliances'])
+    # df['Appliances'] = np.log1p(df['Appliances'])
 
     # Create sequences using the DataFrame (so we can access column names)
-    X, y = create_sequences(df, input_window=input_window, output_window=output_window)
+    X, y = create_sequences(df, input_window=input_window, output_window=output_window, offset=offset)
 
     # Convert to PyTorch tensors
     X = torch.tensor(X, dtype=torch.float32)
