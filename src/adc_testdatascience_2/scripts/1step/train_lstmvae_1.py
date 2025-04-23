@@ -76,7 +76,7 @@ if __name__ == "__main__":
         num_hidden=64,
         num_layers=2,
         dropout=0.3,
-        output_window=100,  # 100 time steps forecasted
+        output_window=1,  # 100 time steps forecasted
         output_dim=1        # predicting 1 variable: Appliances
     )
     train_direct_lstmvae(model, train_loader, val_loader, device, epochs=10)

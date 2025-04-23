@@ -19,7 +19,7 @@ class LSTMVAE(nn.Module):
         self.log_var = nn.Linear(num_hidden, num_hidden)
 
         # Decoder: Linear layer maps from latent to full output window of target variable
-        self.decoder = nn.Linear(num_hidden, output_window * output_dim)
+        self.decoder = nn.Linear(num_hidden, output_window)
 
     def reparametrize(self, mu, log_var):
         std = torch.exp(0.5 * log_var)
@@ -34,7 +34,7 @@ class LSTMVAE(nn.Module):
         out = encoded * (1 + z)  # shape: (batch, hidden_size)
         # out = encoded #* (1 + z)  # shape: (batch, hidden_size)
         decoded = self.decoder(out)  # shape: (batch, output_window * output_dim)
-        return decoded.view(-1, self.output_window, self.output_dim)  # reshape to (batch, 100, 1)
+        return decoded.view(-1, self.output_window)#, self.output_dim)  # reshape to (batch, 100, 1)
 
     def forward(self, x):
         encoded = self.encode(x)
