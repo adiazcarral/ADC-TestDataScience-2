@@ -16,7 +16,7 @@ plot_path = "src/adc_testdatascience_2/scripts/plots/rnn_1step_eval.png"
 input_window = 100
 output_window = 1
 input_dim = 26
-hidden_dim = 64
+hidden_dim = 128
 num_layers = 2
 forecast_steps = 100  # predict 100 test targets
 

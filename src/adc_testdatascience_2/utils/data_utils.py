@@ -6,29 +6,6 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 
 
-# def create_sequences(dataframe, input_window=500, output_window=100, offset=100, step=12):
-#     appliances_idx = dataframe.columns.get_loc("Appliances")
-    
-#     # Drop Appliances column for X, keep it for y
-#     # X_data = dataframe.drop(columns=["Appliances"]).values
-#     X_data = dataframe
-#     y_data = dataframe["Appliances"].values
-    
-#     X, y = [], []
-#     for i in range(0, len(dataframe) - input_window - output_window, step):  # Increment by 'step' (6)
-#         X.append(X_data[i:i + input_window])  # [window, num_features-1]
-#         y.append(y_data[i + input_window:i + input_window + output_window])  # [output_window]
-        
-#         # y.append(y_data[i + input_window + offset:i + input_window + offset + output_window])  # [output_window]
-        
-#     X = np.array(X)
-#     y = np.array(y)
-
-#     print(f"✅ X shape: {X.shape} (samples, input_window, input_features)")
-#     print(f"✅ y shape: {y.shape} (samples, output_window)")
-
-#     return X, y
-
 def create_sequences(dataframe, input_window=500, output_window=1, step=24, offset=100):
     appliances_idx = dataframe.columns.get_loc("Appliances")
 
