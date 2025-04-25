@@ -1,13 +1,23 @@
-### `docs/usage.md`
+2. Create a virtual environment
+
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+pip install -r requirements.txt
+
+pip install ipykernel
+python -m ipykernel install --user --name appliances-forecast
+
+
+---
+
+### 📝 `docs/usage.md`
 
 ```markdown
-# Usage
-
-The **ADC Test Data Science 1** package provides scripts for training, testing, and evaluation of models. Here is a quick guide on how to use the package.
-
-## Training
-
-To train a model, use the following script:
+# 🚀 Usage
+```
+## 1. Preprocess the dataset
 
 ```bash
-python src/train.py --model logistic
+python src/data/preprocess.py
+```

@@ -1,13 +1,14 @@
-### `docs/testing.md`
+### 📝 `docs/testing.md`
 
 ```markdown
-# Testing
+# 🧪 Testing
+```
+This project includes basic tests to ensure model and pipeline integrity.
 
-The **ADC Test Data Science 1** package includes unit, functional, and integration tests. These tests are written using `pytest` and can be run as follows.
+## ✅ Unit Tests
 
-## Running Tests
-
-To run all tests, use the following command:
+Tests for individual modules like LSTM encoder/decoder:
 
 ```bash
-pytest
+pytest tests/test_unit_model.py
+```

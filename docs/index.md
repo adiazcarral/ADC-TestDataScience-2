@@ -1,8 +1,15 @@
-# ADC Test Data Science 1
+# 🔌 Appliances Energy Forecasting
 
-Welcome to the documentation for **ADC Test Data Science 1**, an end-to-end machine learning pipeline package. This package contains implementations of different machine learning models, along with the necessary scripts for training, testing, and hyperparameter optimization.
+This project forecasts energy usage using the Appliances Energy Prediction dataset. It implements:
 
-## Table of Contents
-- [Installation](installation.md)
-- [Usage](usage.md)
-- [Testing](testing.md)
+- Classical ARIMA
+- Autoregressive RNN
+- Probabilistic LSTM-VAE with uncertainty estimation
+
+Forecasts are made for 100 future time steps using multivariate inputs (26 features).
+
+## Key Features
+
+- Probabilistic forecasting
+- Direct vs autoregressive strategies
+- Evaluation with MAE, RMSE, R², and CRPS

@@ -1,0 +1,13 @@
+site_name: Appliances Energy Forecasting
+site_url: https://adcdatascience2.com
+theme:
+  name: material
+  language: en
+  favicon: 'assets/favicon.ico'
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Usage: usage.md
+  - Testing: testing.md
+
