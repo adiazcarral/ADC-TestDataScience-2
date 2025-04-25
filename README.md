@@ -65,11 +65,11 @@ docker build -t adc-testdatascience-2 .
 
 python app.py
 
-Testing the Package
+##Testing the Package##
 
 You can test the package by running predefined Python scripts for model evaluation. For example, to test the lstmvae model for 1-step prediction, you can run the following command:
    ```bash
-python tests/1step/test_lstmvae_1.py
+python src/adc_testdatascience_2/scripts/1step/test_lstmvae_1.py
    ```
 This will load the trained model, perform 1-step forecasting, and evaluate the model’s performance using metrics such as Mean Absolute Error (MAE), Root Mean Squared Error (RMSE), and R-squared (R²).
 
