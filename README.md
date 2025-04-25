@@ -44,7 +44,7 @@ To install and set up the project, use the following steps:
    ```bash
    git clone https://github.com/adiazcarral/adc_testdatascience_2.git
    cd adc_testdatascience_2
-
+   ```	
 	2.	Set up the environment (optional but recommended):
 
 python -m venv venv
@@ -65,6 +65,13 @@ docker build -t adc-testdatascience-2 .
 
 python app.py
 
+Testing the Package
+
+You can test the package by running predefined Python scripts for model evaluation. For example, to test the lstmvae model for 1-step prediction, you can run the following command:
+   ```bash
+python tests/1step/test_lstmvae_1.py
+   ```
+This will load the trained model, perform 1-step forecasting, and evaluate the model’s performance using metrics such as Mean Absolute Error (MAE), Root Mean Squared Error (RMSE), and R-squared (R²).
 
 
 Usage
