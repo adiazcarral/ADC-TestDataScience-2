@@ -1,12 +1,28 @@
 import torch
-from src.adc_testdatascience_1.models.logistic import LogisticRegression
-from src.adc_testdatascience_1.utils.data_utils import get_dataloaders
-from src.adc_testdatascience_1.scripts.train_model import train_model
+import os
+from src.adc_testdatascience_2.models.lstm_vae import LSTMVAE
 
-def test_train_model_functional():
-    train_loader, val_loader, _ = get_dataloaders(subset_fraction=0.01)
-    model = LogisticRegression()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    trained_model, history = train_model(model, train_loader, val_loader, device, epochs=1)
-    assert len(history["train_loss"]) == 1
-    assert isinstance(history["val_acc"][0], float)
+def test_end_to_end_pipeline():
+    model = LSTMVAE(
+        num_input=26,
+        num_hidden=128,
+        num_layers=2,
+        dropout=0.3,
+        output_window=1,
+        output_dim=1
+    )
+    dummy_input = torch.randn(4, 500, 26)
+    dummy_target = torch.randn(4, 100)
+    
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    loss_fn = torch.nn.MSELoss()
+
+    model.train()
+    output = model(dummy_input)
+    loss = loss_fn(output, dummy_target)
+    loss.backward()
+    optimizer.step()
+
+    torch.save(model.state_dict(), "test_dummy_model.pth")
+    assert os.path.exists("test_dummy_model.pth")
+    os.remove("test_dummy_model.pth")
