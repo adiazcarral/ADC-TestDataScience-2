@@ -1,37 +1,32 @@
-import os
-import torch
-import pickle
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List
+import torch
+import joblib
+import numpy as np
 
-from src.adc_testdatascience_1.models.logistic import LogisticRegression
+# Define input format
+class InputData(BaseModel):
+    window: list[list[float]]  # 2D list: [timesteps, features]
 
-app = FastAPI()
+# Load model and scaler
+model = torch.load("models/lstm_vae_best.pth", map_location=torch.device("cpu"))
+model.eval()
 
-# Setup device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+scaler = joblib.load("processed_energy_scaler.pkl")
 
-# Load the model from pickle file
-model_path = os.path.join("src", "adc_testdatascience_1", "models", "logistic_model.pkl")
-with open(model_path, "rb") as f:
-    model = pickle.load(f)
+app = FastAPI(title="Appliances Energy Forecasting API")
 
-model.eval()  # Set model to evaluation mode
-model.to(device)
-
-# Pydantic model for input validation
-class PredictionInput(BaseModel):
-    inputs: List[List[float]]  # Expecting 2D list of floats
-
-# Prediction endpoint
 @app.post("/predict")
-async def predict(data: PredictionInput):
+def predict(data: InputData):
     try:
-        inputs = torch.tensor(data.inputs, dtype=torch.float32).to(device)
+        x = np.array(data.window).astype(np.float32)
+        x_scaled = scaler.transform(x)
+        x_tensor = torch.tensor(x_scaled).unsqueeze(0)  # shape: [1, timesteps, features]
+
         with torch.no_grad():
-            outputs = model(inputs)
-            _, predicted = torch.max(outputs, 1)  # Get predicted class
-        return {"prediction": predicted.tolist()}
+            mean, _, _, _ = model(x_tensor)
+            forecast = mean.squeeze(0).numpy()  # shape: [forecast_steps, 1]
+
+        return {"forecast": forecast.tolist()}
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
